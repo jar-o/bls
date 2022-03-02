@@ -70,6 +70,20 @@ func Verify(sigBytes, pubkeyBytes, message []byte) (bool, error) {
 	return sig.Verify(pubkey, message), nil
 }
 
+func GenerateAggregatePubKey(pubkeyBytes [][]byte) (bls.PublicKey, []big.Int, error) {
+	pubkeys := make([]bls.PublicKey, 0)
+	for _, pkbytes := range pubkeyBytes {
+		pk, err := bls.UnmarshalPublicKey(pkbytes)
+		if err != nil {
+			return bls.ZeroPublicKey(), []big.Int{}, err
+		}
+		pubkeys = append(pubkeys, pk)
+	}
+	anticoefs := bls.CalculateAntiRogueCoefficients(pubkeys)
+	aggpubkey := bls.AggregatePublicKeys(pubkeys, anticoefs)
+	return aggpubkey, anticoefs, nil
+}
+
 func AggregateSignatures(sigBytes [][]byte, pubBytes [][]byte, bitmask *big.Int) (bls.PublicKey, bls.Signature, error) {
 	pub := bls.ZeroPublicKey()
 	sig := bls.ZeroSignature()

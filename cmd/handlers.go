@@ -117,17 +117,19 @@ func aggPubkeyHandler(cmd *cobra.Command, args []string) {
 	if len(args) == 0 {
 		errorExit("Please specify a list of public keys to combine.")
 	}
-	pubkeys := make([]bls.PublicKey, 0)
+
+	pubkeyBytes := make([][]byte, 0)
 	for _, pkhex := range args {
 		pkbytes, err := hex.DecodeString(pkhex)
 		panicIf(err)
-		pk, err := bls.UnmarshalPublicKey(pkbytes)
-		panicIf(err)
-		pubkeys = append(pubkeys, pk)
+		pubkeyBytes = append(pubkeyBytes, pkbytes)
 	}
-	anticoefs := bls.CalculateAntiRogueCoefficients(pubkeys)
-	aggpubkey := bls.AggregatePublicKeys(pubkeys, anticoefs)
+
+	aggpubkey, anticoefs, err := lib.GenerateAggregatePubKey(pubkeyBytes)
+	panicIf(err)
+
 	fmt.Printf("public: %s\n", hex.EncodeToString(aggpubkey.Marshal()))
+
 	var acoefs string
 	for i, a := range anticoefs {
 		if i == 0 {
