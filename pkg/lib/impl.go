@@ -3,8 +3,10 @@ package lib
 import (
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/eywa-protocol/bls-crypto/bls"
@@ -14,6 +16,8 @@ const (
 	ENVKEY_PRIVKEY_HEX = "BLS_PRIVKEY"
 	ENVKEY_HOME        = "HOME"
 	HOME_DIR           = ".bls"
+	PRIVKEY_DEFAULT    = "privkey"
+	PUBKEY_DEFAULT     = "pubkey"
 )
 
 func GenerateKeyPair() (bls.PrivateKey, bls.PublicKey) {
@@ -21,21 +25,37 @@ func GenerateKeyPair() (bls.PrivateKey, bls.PublicKey) {
 	return priv, pub
 }
 
-// Look in all the standard places and if not found, error
-// TODO move to cmd/handlers.go
+func privKeyFromHex(privhex string) (bls.PrivateKey, error) {
+	privbytes, err := hex.DecodeString(strings.TrimSpace(privhex))
+	if err != nil {
+		return bls.PrivateKey{}, err
+	}
+
+	priv, err := bls.UnmarshalPrivateKey(privbytes)
+	if err != nil {
+		return bls.PrivateKey{}, err
+	}
+
+	return priv, nil
+}
+
+// Look in all the standard places for a private key, and if not found, error
 func FindPrivateKey() (bls.PrivateKey, error) {
 	privhex, ok := os.LookupEnv(ENVKEY_PRIVKEY_HEX)
 	if ok {
-		privbytes, err := hex.DecodeString(privhex)
-		if err != nil {
-			return bls.PrivateKey{}, err
+		return privKeyFromHex(privhex)
+	}
+	home, ok := os.LookupEnv(ENVKEY_HOME)
+	if ok {
+		privkeyFile := filepath.Join(home, HOME_DIR, PRIVKEY_DEFAULT)
+		_, err := os.Stat(privkeyFile)
+		if err == nil {
+			content, err := ioutil.ReadFile(privkeyFile)
+			if err != nil {
+				return bls.PrivateKey{}, err
+			}
+			return privKeyFromHex(string(content))
 		}
-
-		priv, err := bls.UnmarshalPrivateKey(privbytes)
-		if err != nil {
-			return bls.PrivateKey{}, err
-		}
-		return priv, nil
 	}
 	return bls.PrivateKey{}, fmt.Errorf("Couldn't find private key anywhere expected!")
 }
@@ -84,6 +104,18 @@ func GenerateAggregatePubKey(pubkeyBytes [][]byte) (bls.PublicKey, []big.Int, er
 	return aggpubkey, anticoefs, nil
 }
 
+func GenerateMembershipKeyParts(priv bls.PrivateKey, aggpubBytes []byte, coef *big.Int, keycount int) ([]bls.Signature, error) {
+	sigs := make([]bls.Signature, 0)
+	aggpub, err := bls.UnmarshalPublicKey(aggpubBytes)
+	if err != nil {
+		return sigs, err
+	}
+	for i := 0; i < keycount; i++ {
+		sigs = append(sigs, priv.GenerateMembershipKeyPart(byte(i), aggpub, *coef))
+	}
+	return sigs, nil
+}
+
 func AggregateSignatures(sigBytes [][]byte, pubBytes [][]byte, bitmask *big.Int) (bls.PublicKey, bls.Signature, error) {
 	pub := bls.ZeroPublicKey()
 	sig := bls.ZeroSignature()
@@ -107,6 +139,7 @@ func AggregateSignatures(sigBytes [][]byte, pubBytes [][]byte, bitmask *big.Int)
 	return pub, sig, nil
 }
 
+//TODO should pass bytes?
 func AggregateMemberKeys(ms [][]string) ([]bls.Signature, error) {
 	// fmt.Println(len(ms))
 	// fmt.Println(ms)

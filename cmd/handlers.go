@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/eywa-protocol/bls-crypto/bls"
 	"github.com/spf13/cobra"
 )
 
@@ -104,12 +103,16 @@ func msignHandler(cmd *cobra.Command, args []string) {
 	}
 	aggpubBytes, err := hex.DecodeString(msignAggPub)
 	panicIf(err)
+
 	memberKeyBytes, err := hex.DecodeString(msignMemberKey)
 	panicIf(err)
+
 	priv, err := lib.FindPrivateKey()
 	panicIf(err)
+
 	s, err := lib.Multisign(priv, []byte(args[0]), aggpubBytes, memberKeyBytes)
 	panicIf(err)
+
 	fmt.Printf("%s\n", hex.EncodeToString(s.Marshal()))
 }
 
@@ -151,28 +154,29 @@ func genMembershipKeyHandler(cmd *cobra.Command, args []string) {
 	if len(args) != 1 {
 		errorExit("You must provide an anti-coefficient, which is generated with --aggregate-pubkeys.")
 	}
+
 	keycount, err := strconv.Atoi(genMembershipKeyCount)
 	panicIf(err)
+
 	priv, err := lib.FindPrivateKey()
 	panicIf(err)
+
 	coef := new(big.Int)
 	coef.SetString(args[0], 16)
 
 	aggpubBytes, err := hex.DecodeString(genMembershipAggPub)
 	panicIf(err)
 
-	aggpub, err := bls.UnmarshalPublicKey(aggpubBytes)
+	sigs, err := lib.GenerateMembershipKeyParts(priv, aggpubBytes, coef, keycount)
 	panicIf(err)
-
 	for i := 0; i < keycount; i++ {
-		s := hex.EncodeToString(priv.GenerateMembershipKeyPart(byte(i), aggpub, *coef).Marshal())
+		s := hex.EncodeToString(sigs[i].Marshal())
 		if i == 0 {
 			fmt.Printf("%s", s)
 		} else {
 			fmt.Printf(" %s", s)
 		}
 	}
-	fmt.Printf("\n")
 }
 
 func aggregateMemberKeysCmdHandler(cmd *cobra.Command, args []string) {
@@ -207,6 +211,7 @@ func aggregateSigsHandler(cmd *cobra.Command, args []string) {
 	if len(args) == 0 {
 		errorExit("Must provide a space separated list of signatures to aggregate.")
 	}
+
 	pubsHex := strings.Split(aggregateSigsPubKeys, ",")
 	pubBytes := make([][]byte, 0)
 	for _, ph := range pubsHex {
@@ -214,6 +219,7 @@ func aggregateSigsHandler(cmd *cobra.Command, args []string) {
 		panicIf(err)
 		pubBytes = append(pubBytes, h)
 	}
+
 	sigBytes := make([][]byte, 0)
 	for _, sh := range args {
 		h, err := hex.DecodeString(sh)
@@ -224,6 +230,7 @@ func aggregateSigsHandler(cmd *cobra.Command, args []string) {
 	mask := lib.BitStringToBigInt(aggregateSigsBitmask)
 	pub, sig, err := lib.AggregateSignatures(sigBytes, pubBytes, mask)
 	panicIf(err)
+
 	fmt.Printf("public: %s\n", hex.EncodeToString(pub.Marshal()))
 	fmt.Printf("signature: %s\n", hex.EncodeToString(sig.Marshal()))
 }
