@@ -56,6 +56,20 @@ func Multisign(priv bls.PrivateKey, message []byte, aggPub []byte, memberKey /*s
 	return priv.Multisign(message, aggpk, mk), nil
 }
 
+func Verify(sigBytes, pubkeyBytes, message []byte) (bool, error) {
+	sig, err := bls.UnmarshalSignature(sigBytes)
+	if err != nil {
+		return false, err
+	}
+
+	pubkey, err := bls.UnmarshalPublicKey(pubkeyBytes)
+	if err != nil {
+		return false, err
+	}
+
+	return sig.Verify(pubkey, message), nil
+}
+
 func AggregateSignatures(sigBytes [][]byte, pubBytes [][]byte, bitmask *big.Int) (bls.PublicKey, bls.Signature, error) {
 	pub := bls.ZeroPublicKey()
 	sig := bls.ZeroSignature()

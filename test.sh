@@ -1,22 +1,26 @@
 #!/usr/bin/env bash
 
+gofiles='cmd/*.go'
+
 te() {
     echo; echo "=> $1"
 }
+oks=OK
+noks=NOK
 
 ok() {
     if $1; then
-        echo "OK: $2"
+        echo "$oks: $2"
     else
-        echo "NOK: $2"
+        echo "$noks: $2"
     fi
 }
 
 ok_fail() {
     if [[ $? = 0 ]]; then
-        echo "NOK: $1"
+        echo "$noks: $1"
     else
-        echo "OK: $1"
+        echo "$oks: $1"
     fi
 }
 
@@ -45,28 +49,28 @@ pk3=269069de7a413f718cdb77048b52aeafce45009a1fc7839b1fcfa07882cea63e0b0e6a08a6e4
 
 
 te "Signing message: $message ..."
-res=$(BLS_PRIVKEY=$sk go run cmd/main.go sign helowrld)
+res=$(BLS_PRIVKEY=$sk go run $gofiles sign helowrld)
 ok_abort "bls sign"
 echo "$res"
 sig=$(echo "$res" | awk '{print $2}')
 
 te "Verifying message: $message ..."
-res=$(go run cmd/main.go verify $message --sig $sig --pubkey $pk)
+res=$(go run $gofiles verify $message --sig $sig --pubkey $pk)
 ok_abort "bls verify"
 
 te "Checking verify against wrong message..."
-res=$(go run cmd/main.go verify --sig $sig --pubkey $pk wrong_message)
+res=$(go run $gofiles verify --sig $sig --pubkey $pk wrong_message)
 ok_fail "$res"
 
 te "Checking verify against wrong signature..."
 wrong_sig=10ae339d6f41321eb50d677bdd9ba6a527f4455a3ced3c511982dbec3baa67030d398a3c455035de88e9e69dfadf5e8361be45e0acf2da39b9c190428686863c
-res=$(go run cmd/main.go verify --sig $wrong_sig --pubkey $pk $message)
+res=$(go run $gofiles verify --sig $wrong_sig --pubkey $pk $message)
 ok_fail "$res"
 
 te "Mult-sig test..."
 
 te "Generate aggregate public key..."
-res=$(go run cmd/main.go aggregate-pubkeys $pk1 $pk2 $pk3)
+res=$(go run $gofiles aggregate-pubkeys $pk1 $pk2 $pk3)
 echo "$res"
 aggpub=$(echo "$res" | grep public | awk '{print $2}')
 acoefs=$(echo "$res" | grep anti-coefficients | awk '{$1=""; print $0}' | xargs)
@@ -77,7 +81,7 @@ i=1
 memberkeys=""
 for a in $acoefs; do
     user_sk=$(eval "echo \$sk${i}")
-    res=$(BLS_PRIVKEY=$user_sk go run cmd/main.go gen-membership-key $a --agg-pubkey $aggpub --total-keys 3)
+    res=$(BLS_PRIVKEY=$user_sk go run $gofiles gen-membership-key $a --agg-pubkey $aggpub --total-keys 3)
     ok_abort "gen-membership-key / $res"
     i=$((i+1))
     comma=$(echo "$res" | tr ' ' ',')
@@ -86,7 +90,7 @@ done
 memberkeys=$(echo "$memberkeys" | xargs)
 
 te "Aggregate the member keys..."
-membersigs=$(go run cmd/main.go aggregate-member-keys $memberkeys)
+membersigs=$(go run $gofiles aggregate-member-keys $memberkeys)
 ok_abort "bls aggregate-member-keys"
 echo "$membersigs" | tr ' ' '\n'
 
@@ -95,7 +99,7 @@ i=1
 aggsigs=""
 for mk in $(echo "$membersigs" | tr ' ' '\n'); do
     user_sk=$(eval "echo \$sk${i}")
-    res=$(BLS_PRIVKEY=$user_sk go run cmd/main.go msign $message --agg-pubkey $aggpub --membership-key $mk)
+    res=$(BLS_PRIVKEY=$user_sk go run $gofiles msign $message --agg-pubkey $aggpub --membership-key $mk)
     ok_abort "bls msign / $res"
     aggsigs="$aggsigs $res"
     i=$((i+1))
@@ -103,25 +107,25 @@ done
 aggsigs=$(echo "$aggsigs"|xargs)
 
 te "Aggregate into threshold signature..."
-res=$(go run cmd/main.go aggregate-sigs $aggsigs --public-keys="$pk1,$pk2,$pk3" --bitmask '111')
+res=$(go run $gofiles aggregate-sigs $aggsigs --public-keys="$pk1,$pk2,$pk3" --bitmask '111')
 ok_abort "bls aggregate-sigs / $res"
 subsig=$(echo "$res" | grep signature: | awk '{print $2}')
 subpub=$(echo "$res" | grep public: | awk '{print $2}')
 
 te "Verify multsig..."
-res=$(go run cmd/main.go aggregate-verify $message --sub-sig $subsig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 111)
+res=$(go run $gofiles aggregate-verify $message --sub-sig $subsig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 111)
 ok_abort "bls aggregate-verify"
-res=$(go run cmd/main.go aggregate-verify $message --sub-sig $subsig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 00000111)
+res=$(go run $gofiles aggregate-verify $message --sub-sig $subsig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 00000111)
 ok_abort "bls aggregate-verify"
 
 te "Bad bitmask fails..."
-res=$(go run cmd/main.go aggregate-verify $message --sub-sig $subsig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 101)
+res=$(go run $gofiles aggregate-verify $message --sub-sig $subsig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 101)
 ok_fail "$res"
 
 te "Other bad bitmask fails..."
-res=$(go run cmd/main.go aggregate-verify $message --sub-sig $subsig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 11100000)
+res=$(go run $gofiles aggregate-verify $message --sub-sig $subsig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 11100000)
 ok_fail "$res"
 
 te "Bad signature fails..."
-res=$(go run cmd/main.go aggregate-verify $message --sub-sig $wrong_sig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 111)
+res=$(go run $gofiles aggregate-verify $message --sub-sig $wrong_sig --sub-pubkey $subpub --agg-pubkey $aggpub --bitmask 111)
 ok_fail "$res"
