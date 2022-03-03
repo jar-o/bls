@@ -139,30 +139,23 @@ func AggregateSignatures(sigBytes [][]byte, pubBytes [][]byte, bitmask *big.Int)
 	return pub, sig, nil
 }
 
-//TODO should pass bytes?
+// TODO passing strings vs bytes...
 func AggregateMemberKeys(ms [][]string) ([]bls.Signature, error) {
-	// fmt.Println(len(ms))
-	// fmt.Println(ms)
 	res := make([]bls.Signature, len(ms))
-	// fmt.Println(res)
 	for i := 0; i < len(ms); i++ {
 		res[i] = bls.ZeroSignature()
 		for j := 0; j < len(ms); j++ {
-			// fmt.Printf("\t%s\n", ms[j][i])
 			b, err := hex.DecodeString(ms[j][i])
 			if err != nil {
 				return res, err
 			}
 			sig, err := bls.UnmarshalSignature(b)
-			// fmt.Printf("\t%+v\n", sig)
 			if err != nil {
 				return res, err
 			}
 			res[i] = res[i].Aggregate(sig)
 		}
-		// fmt.Println("-----")
 	}
-	// fmt.Println(res)
 	return res, nil
 }
 

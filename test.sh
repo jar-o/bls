@@ -54,9 +54,25 @@ ok_abort "bls sign"
 echo "$res"
 sig=$(echo "$res" | awk '{print $2}')
 
+# hex conversion
+res=$(BLS_PRIVKEY=$sk go run $gofiles sign $(printf $message | xxd -p))
+sigcheck=$(echo "$res" | awk '{print $2}')
+test "$sig" = "$sigcheck"
+ok_abort "--message-from-hex"
+
+# base64 conversion
+res=$(BLS_PRIVKEY=$sk go run $gofiles sign $(printf $message | base64))
+sigcheck=$(echo "$res" | awk '{print $2}')
+test "$sig" = "$sigcheck"
+ok_abort "--message-from-base64"
+
 te "Verifying message: $message ..."
 res=$(go run $gofiles verify $message --sig $sig --pubkey $pk)
 ok_abort "bls verify"
+res=$(go run $gofiles verify --sig $sig --pubkey $pk --message-from-hex $(printf $message | xxd -p))
+ok_abort "bls verify --message-from-hex"
+res=$(go run $gofiles verify --sig $sig --pubkey $pk --message-from-base64 $(printf $message | base64))
+ok_abort "bls verify --message-from-base64"
 
 te "Checking verify against wrong message..."
 res=$(go run $gofiles verify --sig $sig --pubkey $pk wrong_message)

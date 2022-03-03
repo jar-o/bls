@@ -2,6 +2,7 @@ package main
 
 import (
 	"bls/pkg/lib"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -15,8 +16,8 @@ import (
 )
 
 var genKeyPairSaveTo string
-var signDataHex string
-var signDataBase64 string
+var messageAsHex string
+var messageAsBase64 string
 var verifyPubKey string
 var verifySig string
 var genMembershipKeyCount string
@@ -47,6 +48,32 @@ func panicIfExists(path string) {
 	}
 }
 
+func bytesFromHex(hexstr string) []byte {
+	b, err := hex.DecodeString(hexstr)
+	fmt.Println(string(b))
+	panicIf(err)
+	return b
+}
+
+func bytesFromBase64(bstr string) []byte {
+	b, err := base64.StdEncoding.DecodeString(bstr)
+	panicIf(err)
+	return b
+}
+
+func decodeMessage() []byte {
+	if messageAsHex == "" && messageAsBase64 == "" { // NOTE these are overloaded between commands
+		errorExit("Please supply a message encoded in hex or base64.")
+	}
+	if messageAsHex != "" {
+		return bytesFromHex(messageAsHex)
+	}
+	if messageAsBase64 != "" {
+		return bytesFromBase64(messageAsBase64)
+	}
+	return []byte{}
+}
+
 func genKeyPairHandler(cmd *cobra.Command, args []string) {
 	priv, pub := lib.GenerateKeyPair()
 	if genKeyPairSaveTo == "" {
@@ -74,12 +101,9 @@ func signHandler(cmd *cobra.Command, args []string) {
 		fmt.Printf("signature: %s\n", hex.EncodeToString(sig.Marshal()))
 		return
 	} else {
-		if signDataHex != "" { // TODO
-			fmt.Println("TODO")
-		}
-		if signDataBase64 != "" {
-			fmt.Println("TODO")
-		}
+		message := decodeMessage()
+		sig := lib.Sign(priv, message)
+		fmt.Printf("signature: %s\n", hex.EncodeToString(sig.Marshal()))
 	}
 	fmt.Println("Something went wrong... missing data perhaps? Please try again.")
 	os.Exit(1)
@@ -90,8 +114,11 @@ func verifyHandler(cmd *cobra.Command, args []string) {
 		errorExit("Please supply a signature and public key to verify.")
 	}
 
-	if len(args) != 1 {
-		errorExit("Please also supply a signature in hex format.")
+	var message []byte
+	if len(args) == 1 {
+		message = []byte(args[0])
+	} else {
+		message = decodeMessage()
 	}
 
 	sigBytes, err := hex.DecodeString(verifySig)
@@ -100,7 +127,7 @@ func verifyHandler(cmd *cobra.Command, args []string) {
 	pubkeyBytes, err := hex.DecodeString(verifyPubKey)
 	panicIf(err)
 
-	ok, err := lib.Verify(sigBytes, pubkeyBytes, []byte(args[0]))
+	ok, err := lib.Verify(sigBytes, pubkeyBytes, message)
 	panicIf(err)
 
 	if !ok {
@@ -282,10 +309,14 @@ func aggregateVerifyHandler(cmd *cobra.Command, args []string) {
 	panicIf(err)
 	mask := lib.BitStringToBigInt(aggregateVerifyBitmask)
 
-	///TODO message needs to be handled as base64 and/or HEX... possibly --from-file
-	//if len(args) == 0 {...}
+	message := make([]byte, 0)
+	if len(args) == 1 {
+		message = []byte(args[0])
+	} else {
+		message = decodeMessage()
+	}
 
-	ok, err := lib.VerifyMultisig(subSigBytes, aggPubBytes, subPubBytes, []byte(args[0]), mask)
+	ok, err := lib.VerifyMultisig(subSigBytes, aggPubBytes, subPubBytes, message, mask)
 	if err != nil {
 		errorExit(err.Error())
 	}

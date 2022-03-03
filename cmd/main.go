@@ -18,11 +18,11 @@ func main() {
 
 	signCmd := &cobra.Command{
 		Use:   "sign",
-		Short: "Sign some data with your key. If binary data use one of the flags below.",
+		Short: "Sign some data with your key. If binary data you use one of the flags below.",
 		Run:   signHandler,
 	}
-	signCmd.Flags().StringVar(&signDataHex, "data-from-hex", "", "--data-hex=68656C6F7772640A")
-	signCmd.Flags().StringVar(&signDataBase64, "data-from-base64", "", "--data-base64=aGVsb3dybGQK")
+	signCmd.Flags().StringVar(&messageAsHex, "message-from-hex", "", "--message-from-hex=68656C6F7772640A")
+	signCmd.Flags().StringVar(&messageAsBase64, "message-from-base64", "", "--message-from-base64=aGVsb3dybGQK")
 
 	verifyCmd := &cobra.Command{
 		Use:   "verify",
@@ -31,6 +31,8 @@ func main() {
 	}
 	verifyCmd.Flags().StringVar(&verifySig, "sig", "", "--sig=68656C6F7772640A")
 	verifyCmd.Flags().StringVar(&verifyPubKey, "pubkey", "", "--pubkey=DEADBEEF0123")
+	verifyCmd.Flags().StringVar(&messageAsHex, "message-from-hex", "", "--message-from-hex=68656C6F7772640A")
+	verifyCmd.Flags().StringVar(&messageAsBase64, "message-from-base64", "", "--message-from-base64=aGVsb3dybGQK")
 
 	aggPubkeyCmd := &cobra.Command{
 		Use:   "aggregate-pubkeys",
@@ -77,6 +79,8 @@ func main() {
 	aggregateVerifyCmd.Flags().StringVar(&aggregateVerifySubpub, "sub-pubkey", "", "--sub-pubkey=DEAD123")
 	aggregateVerifyCmd.Flags().StringVar(&aggregateVerifyAggpub, "agg-pubkey", "", "--agg-pubkey=BEEF456")
 	aggregateVerifyCmd.Flags().StringVar(&aggregateVerifyBitmask, "bitmask", "", "--bitmask=111")
+	aggregateVerifyCmd.Flags().StringVar(&messageAsHex, "message-from-hex", "", "--message-from-hex=68656C6F7772640A")
+	aggregateVerifyCmd.Flags().StringVar(&messageAsBase64, "message-from-base64", "", "--message-from-base64=aGVsb3dybGQK")
 
 	bitmaskToIntCmd := &cobra.Command{
 		Use:   "bitmask-to-int",
