@@ -79,7 +79,7 @@ func main() {
 	aggregateVerifyCmd.Flags().StringVar(&aggregateVerifyBitmask, "bitmask", "", "--bitmask=111")
 
 	bitmaskToIntCmd := &cobra.Command{
-		Use:   "bitmask-to-hex",
+		Use:   "bitmask-to-int",
 		Short: "Utility for converting a bitstring (e.g. '1101') to an integer value.",
 		Run:   bitmaskToIntHandler,
 	}

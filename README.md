@@ -1,2 +1,3 @@
 # bls
-Utility for doing BLS12-381 signing and verification
+
+Utility for doing BLS12-381 signing and verification.
