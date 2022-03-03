@@ -4,8 +4,10 @@ import (
 	"bls/pkg/lib"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -39,18 +41,34 @@ func errorExit(m string) {
 	os.Exit(1)
 }
 
+func panicIfExists(path string) {
+	if _, err := os.Stat(path); err == nil {
+		panic(fmt.Sprintf("%s already exists! %s", path, err))
+	}
+}
+
 func genKeyPairHandler(cmd *cobra.Command, args []string) {
 	priv, pub := lib.GenerateKeyPair()
 	if genKeyPairSaveTo == "" {
 		fmt.Printf("private: %s\npublic: %s\n", hex.EncodeToString(priv.Marshal()), hex.EncodeToString(pub.Marshal()))
 	} else {
-		fmt.Println("TODO write to file...")
+		info, err := os.Stat(genKeyPairSaveTo)
+		panicIf(err)
+		if !info.IsDir() {
+			errorExit(fmt.Sprintf("You must provide a folder that already exists."))
+		}
+		privkeyFile := filepath.Join(genKeyPairSaveTo, lib.PRIVKEY_DEFAULT)
+		panicIfExists(privkeyFile)
+		ioutil.WriteFile(privkeyFile, []byte(hex.EncodeToString(priv.Marshal())), 0600)
+		pubkeyFile := filepath.Join(genKeyPairSaveTo, lib.PUBKEY_DEFAULT)
+		panicIfExists(pubkeyFile)
+		ioutil.WriteFile(pubkeyFile, []byte(hex.EncodeToString(pub.Marshal())), 0600)
 	}
 }
 
 func signHandler(cmd *cobra.Command, args []string) {
 	priv, err := lib.FindPrivateKey()
-	panicIf(err)        // TODO if we only panic in FindPrivateKey() we don't need to return err..
+	panicIf(err)
 	if len(args) == 1 { // Input default expectation is UTF8 string
 		sig := lib.Sign(priv, []byte(args[0]))
 		fmt.Printf("signature: %s\n", hex.EncodeToString(sig.Marshal()))
