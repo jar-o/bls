@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	ENVKEY_PRIVKEY_HEX = "BLS_PRIVKEY"
-	ENVKEY_HOME        = "HOME"
-	HOME_DIR           = ".bls"
-	PRIVKEY_DEFAULT    = "privkey"
-	PUBKEY_DEFAULT     = "pubkey"
+	PRIVKEY_HEX     = "BLS_PRIVKEY"
+	ENVKEY_HOME     = "HOME"
+	HOME_DIR        = ".bls"
+	PRIVKEY_DEFAULT = "privkey"
+	PUBKEY_DEFAULT  = "pubkey"
 )
 
 func GenerateKeyPair() (bls.PrivateKey, bls.PublicKey) {
@@ -41,10 +41,11 @@ func privKeyFromHex(privhex string) (bls.PrivateKey, error) {
 
 // Look in all the standard places for a private key, and if not found, error
 func FindPrivateKey() (bls.PrivateKey, error) {
-	privhex, ok := os.LookupEnv(ENVKEY_PRIVKEY_HEX)
+	privhex, ok := os.LookupEnv(PRIVKEY_HEX)
 	if ok {
 		return privKeyFromHex(privhex)
 	}
+	// TODO custom path lookup? ENVKEY_PRIVKEY_PATH
 	home, ok := os.LookupEnv(ENVKEY_HOME)
 	if ok {
 		privkeyFile := filepath.Join(home, HOME_DIR, PRIVKEY_DEFAULT)
