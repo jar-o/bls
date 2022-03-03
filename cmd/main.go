@@ -78,6 +78,12 @@ func main() {
 	aggregateVerifyCmd.Flags().StringVar(&aggregateVerifyAggpub, "agg-pubkey", "", "--agg-pubkey=BEEF456")
 	aggregateVerifyCmd.Flags().StringVar(&aggregateVerifyBitmask, "bitmask", "", "--bitmask=111")
 
+	bitmaskToIntCmd := &cobra.Command{
+		Use:   "bitmask-to-hex",
+		Short: "Utility for converting a bitstring (e.g. '1101') to an integer value.",
+		Run:   bitmaskToIntHandler,
+	}
+
 	rootCmd.AddCommand(genKeyPairCmd)
 	rootCmd.AddCommand(signCmd)
 	rootCmd.AddCommand(verifyCmd)
@@ -87,5 +93,6 @@ func main() {
 	rootCmd.AddCommand(genMembershipKeyCmd)
 	rootCmd.AddCommand(aggregateMemberKeysCmd)
 	rootCmd.AddCommand(aggregateVerifyCmd)
+	rootCmd.AddCommand(bitmaskToIntCmd)
 	rootCmd.Execute()
 }

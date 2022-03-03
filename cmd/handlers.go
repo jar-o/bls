@@ -235,6 +235,13 @@ func aggregateSigsHandler(cmd *cobra.Command, args []string) {
 	fmt.Printf("signature: %s\n", hex.EncodeToString(sig.Marshal()))
 }
 
+func bitmaskToIntHandler(cmd *cobra.Command, args []string) {
+	if len(args) != 1 {
+		errorExit("Please provide a bit string, e.g. '1101'")
+	}
+	fmt.Println(lib.BitStringToBigInt(args[0]))
+}
+
 func aggregateVerifyHandler(cmd *cobra.Command, args []string) {
 	if aggregateVerifySubsig == "" {
 		errorExit("Must provide subset signature: --sub-sig")
