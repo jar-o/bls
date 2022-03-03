@@ -155,7 +155,14 @@ func msignHandler(cmd *cobra.Command, args []string) {
 	priv, err := bls.FindPrivateKey()
 	panicIf(err)
 
-	s, err := bls.Multisign(priv, []byte(args[0]), aggpubBytes, memberKeyBytes)
+	var message []byte
+	if len(args) == 1 {
+		message = []byte(args[0])
+	} else {
+		message = decodeMessage()
+	}
+
+	s, err := bls.Multisign(priv, message, aggpubBytes, memberKeyBytes)
 	panicIf(err)
 
 	fmt.Printf("%s\n", hex.EncodeToString(s.Marshal()))
