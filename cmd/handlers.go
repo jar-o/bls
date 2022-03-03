@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bls/pkg/lib"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	bls "github.com/jar-o/bls/pkg/lib"
 	"github.com/spf13/cobra"
 )
 
@@ -75,7 +75,7 @@ func decodeMessage() []byte {
 }
 
 func genKeyPairHandler(cmd *cobra.Command, args []string) {
-	priv, pub := lib.GenerateKeyPair()
+	priv, pub := bls.GenerateKeyPair()
 	if genKeyPairSaveTo == "" {
 		fmt.Printf("private: %s\npublic: %s\n", hex.EncodeToString(priv.Marshal()), hex.EncodeToString(pub.Marshal()))
 	} else {
@@ -84,25 +84,25 @@ func genKeyPairHandler(cmd *cobra.Command, args []string) {
 		if !info.IsDir() {
 			errorExit(fmt.Sprintf("You must provide a folder that already exists."))
 		}
-		privkeyFile := filepath.Join(genKeyPairSaveTo, lib.PRIVKEY_DEFAULT)
+		privkeyFile := filepath.Join(genKeyPairSaveTo, bls.PRIVKEY_DEFAULT)
 		panicIfExists(privkeyFile)
 		ioutil.WriteFile(privkeyFile, []byte(hex.EncodeToString(priv.Marshal())), 0600)
-		pubkeyFile := filepath.Join(genKeyPairSaveTo, lib.PUBKEY_DEFAULT)
+		pubkeyFile := filepath.Join(genKeyPairSaveTo, bls.PUBKEY_DEFAULT)
 		panicIfExists(pubkeyFile)
 		ioutil.WriteFile(pubkeyFile, []byte(hex.EncodeToString(pub.Marshal())), 0600)
 	}
 }
 
 func signHandler(cmd *cobra.Command, args []string) {
-	priv, err := lib.FindPrivateKey()
+	priv, err := bls.FindPrivateKey()
 	panicIf(err)
 	if len(args) == 1 { // Input default expectation is UTF8 string
-		sig := lib.Sign(priv, []byte(args[0]))
+		sig := bls.Sign(priv, []byte(args[0]))
 		fmt.Printf("signature: %s\n", hex.EncodeToString(sig.Marshal()))
 		return
 	} else {
 		message := decodeMessage()
-		sig := lib.Sign(priv, message)
+		sig := bls.Sign(priv, message)
 		fmt.Printf("signature: %s\n", hex.EncodeToString(sig.Marshal()))
 	}
 	fmt.Println("Something went wrong... missing data perhaps? Please try again.")
@@ -127,7 +127,7 @@ func verifyHandler(cmd *cobra.Command, args []string) {
 	pubkeyBytes, err := hex.DecodeString(verifyPubKey)
 	panicIf(err)
 
-	ok, err := lib.Verify(sigBytes, pubkeyBytes, message)
+	ok, err := bls.Verify(sigBytes, pubkeyBytes, message)
 	panicIf(err)
 
 	if !ok {
@@ -152,10 +152,10 @@ func msignHandler(cmd *cobra.Command, args []string) {
 	memberKeyBytes, err := hex.DecodeString(msignMemberKey)
 	panicIf(err)
 
-	priv, err := lib.FindPrivateKey()
+	priv, err := bls.FindPrivateKey()
 	panicIf(err)
 
-	s, err := lib.Multisign(priv, []byte(args[0]), aggpubBytes, memberKeyBytes)
+	s, err := bls.Multisign(priv, []byte(args[0]), aggpubBytes, memberKeyBytes)
 	panicIf(err)
 
 	fmt.Printf("%s\n", hex.EncodeToString(s.Marshal()))
@@ -173,7 +173,7 @@ func aggPubkeyHandler(cmd *cobra.Command, args []string) {
 		pubkeyBytes = append(pubkeyBytes, pkbytes)
 	}
 
-	aggpubkey, anticoefs, err := lib.GenerateAggregatePubKey(pubkeyBytes)
+	aggpubkey, anticoefs, err := bls.GenerateAggregatePubKey(pubkeyBytes)
 	panicIf(err)
 
 	fmt.Printf("public: %s\n", hex.EncodeToString(aggpubkey.Marshal()))
@@ -203,7 +203,7 @@ func genMembershipKeyHandler(cmd *cobra.Command, args []string) {
 	keycount, err := strconv.Atoi(genMembershipKeyCount)
 	panicIf(err)
 
-	priv, err := lib.FindPrivateKey()
+	priv, err := bls.FindPrivateKey()
 	panicIf(err)
 
 	coef := new(big.Int)
@@ -212,7 +212,7 @@ func genMembershipKeyHandler(cmd *cobra.Command, args []string) {
 	aggpubBytes, err := hex.DecodeString(genMembershipAggPub)
 	panicIf(err)
 
-	sigs, err := lib.GenerateMembershipKeyParts(priv, aggpubBytes, coef, keycount)
+	sigs, err := bls.GenerateMembershipKeyParts(priv, aggpubBytes, coef, keycount)
 	panicIf(err)
 	for i := 0; i < keycount; i++ {
 		s := hex.EncodeToString(sigs[i].Marshal())
@@ -234,7 +234,7 @@ func aggregateMemberKeysCmdHandler(cmd *cobra.Command, args []string) {
 		as := strings.Split(s, ",")
 		ms = append(ms, as)
 	}
-	sigs, err := lib.AggregateMemberKeys(ms)
+	sigs, err := bls.AggregateMemberKeys(ms)
 	panicIf(err)
 	for i, sig := range sigs {
 		if i == 0 {
@@ -272,8 +272,8 @@ func aggregateSigsHandler(cmd *cobra.Command, args []string) {
 		sigBytes = append(sigBytes, h)
 	}
 
-	mask := lib.BitStringToBigInt(aggregateSigsBitmask)
-	pub, sig, err := lib.AggregateSignatures(sigBytes, pubBytes, mask)
+	mask := bls.BitStringToBigInt(aggregateSigsBitmask)
+	pub, sig, err := bls.AggregateSignatures(sigBytes, pubBytes, mask)
 	panicIf(err)
 
 	fmt.Printf("public: %s\n", hex.EncodeToString(pub.Marshal()))
@@ -284,7 +284,7 @@ func bitmaskToIntHandler(cmd *cobra.Command, args []string) {
 	if len(args) != 1 {
 		errorExit("Please provide a bit string, e.g. '1101'")
 	}
-	fmt.Println(lib.BitStringToBigInt(args[0]))
+	fmt.Println(bls.BitStringToBigInt(args[0]))
 }
 
 func aggregateVerifyHandler(cmd *cobra.Command, args []string) {
@@ -307,7 +307,7 @@ func aggregateVerifyHandler(cmd *cobra.Command, args []string) {
 	panicIf(err)
 	subPubBytes, err := hex.DecodeString(aggregateVerifySubpub)
 	panicIf(err)
-	mask := lib.BitStringToBigInt(aggregateVerifyBitmask)
+	mask := bls.BitStringToBigInt(aggregateVerifyBitmask)
 
 	message := make([]byte, 0)
 	if len(args) == 1 {
@@ -316,7 +316,7 @@ func aggregateVerifyHandler(cmd *cobra.Command, args []string) {
 		message = decodeMessage()
 	}
 
-	ok, err := lib.VerifyMultisig(subSigBytes, aggPubBytes, subPubBytes, message, mask)
+	ok, err := bls.VerifyMultisig(subSigBytes, aggPubBytes, subPubBytes, message, mask)
 	if err != nil {
 		errorExit(err.Error())
 	}
