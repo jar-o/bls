@@ -50,7 +50,6 @@ func panicIfExists(path string) {
 
 func bytesFromHex(hexstr string) []byte {
 	b, err := hex.DecodeString(hexstr)
-	fmt.Println(string(b))
 	panicIf(err)
 	return b
 }
