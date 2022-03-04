@@ -143,9 +143,7 @@ func msignHandler(cmd *cobra.Command, args []string) {
 	if msignMemberKey == "" {
 		errorExit("Please provide your membership key. --membership-key")
 	}
-	if len(args) != 1 {
-		errorExit("Please provide the message to sign.")
-	}
+
 	aggpubBytes, err := hex.DecodeString(msignAggPub)
 	panicIf(err)
 
