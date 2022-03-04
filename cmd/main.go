@@ -61,6 +61,8 @@ func main() {
 	}
 	multiSignCmd.Flags().StringVar(&msignAggPub, "agg-pubkey", "", "--agg-pubkey=DEADBEEF123")
 	multiSignCmd.Flags().StringVar(&msignMemberKey, "membership-key", "", "--membership-key=BEEF456DEAD")
+	multiSignCmd.Flags().StringVar(&messageAsHex, "message-from-hex", "", "--message-from-hex=68656C6F7772640A")
+	multiSignCmd.Flags().StringVar(&messageAsBase64, "message-from-base64", "", "--message-from-base64=aGVsb3dybGQK")
 
 	aggregateSigsCmd := &cobra.Command{
 		Use:   "aggregate-sigs",
